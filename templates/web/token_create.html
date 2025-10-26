@@ -1,0 +1,161 @@
+{% extends 'web/base.html' %}
+{% load static %}
+
+{% block body_class %} class="app-body"{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="mb-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{% url 'web:tokens_list' %}">Tokens</a></li>
+                        <li class="breadcrumb-item active">Create New Token</li>
+                    </ol>
+                </nav>
+                <h1 class="h3 mb-2">Create New Application Token</h1>
+                <p class="text-muted">Generate a new API access token for your application</p>
+            </div>
+
+            <!-- Create Token Form -->
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" action="{% url 'web:token_create' %}">
+                        {% csrf_token %}
+                        
+                        <!-- Basic Information Section -->
+                        <h5 class="mb-3 text-primary">
+                            <i class="bi bi-info-circle me-2"></i>Basic Information
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label for="name" class="form-label fw-semibold">
+                                    Application Name <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="name" 
+                                       name="name" 
+                                       placeholder="e.g., Mobile App, ServiceNow"
+                                       required>
+                                <div class="form-text">A descriptive name for your application</div>
+                            </div>
+
+                            <div class="col-md-6 mb-4">
+                                <label for="company" class="form-label fw-semibold">
+                                    Company/Organization
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="company" 
+                                       name="company" 
+                                       placeholder="e.g., SEU IT Department">
+                                <div class="form-text">Organization using this token</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="email" class="form-label fw-semibold">
+                                Contact Email <span class="text-danger">*</span>
+                            </label>
+                            <input type="email" 
+                                   class="form-control" 
+                                   id="email" 
+                                   name="email" 
+                                   placeholder="e.g., developer@seu.edu.sa"
+                                   required>
+                            <div class="form-text">Contact email for notifications and support</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="notes" class="form-label fw-semibold">
+                                Notes
+                            </label>
+                            <textarea class="form-control" 
+                                      id="notes" 
+                                      name="notes" 
+                                      rows="3"
+                                      placeholder="Brief description of what this application does and why it needs API access..."></textarea>
+                            <div class="form-text">Optional notes to help identify this token</div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Token Configuration Section -->
+                        <h5 class="mb-3 text-primary">
+                            <i class="bi bi-clock-history me-2"></i>Token Configuration
+                        </h5>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label for="access_token_lifetime_hours" class="form-label fw-semibold">
+                                    Access Token Lifetime (hours) <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="access_token_lifetime_hours" 
+                                       name="access_token_lifetime_hours" 
+                                       value="24"
+                                       min="1"
+                                       max="8760"
+                                       required>
+                                <div class="form-text">Default: 24 hours (Max: 8760 = 1 year)</div>
+                            </div>
+
+                            <div class="col-md-6 mb-4">
+                                <label for="refresh_token_lifetime_days" class="form-label fw-semibold">
+                                    Refresh Token Lifetime (days) <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="refresh_token_lifetime_days" 
+                                       name="refresh_token_lifetime_days" 
+                                       value="30"
+                                       min="1"
+                                       max="365"
+                                       required>
+                                <div class="form-text">Default: 30 days (Max: 365 = 1 year)</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-plus-circle me-2"></i>Create Token
+                            </button>
+                            <a href="{% url 'web:tokens_list' %}" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.breadcrumb {
+    background-color: transparent;
+    padding: 0;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb-item a {
+    color: #1B8354;
+    text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+    text-decoration: underline;
+}
+
+.form-control:focus {
+    border-color: #1B8354;
+    box-shadow: 0 0 0 0.2rem rgba(27, 131, 84, 0.25);
+}
+</style>
+{% endblock %}
+

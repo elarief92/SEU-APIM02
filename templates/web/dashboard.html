@@ -1,0 +1,220 @@
+{% extends "web/base.html" %}
+
+{% block body_class %} class="dashboard-body"{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Server Monitoring Section -->
+    <div class="monitoring-section">
+        <h3 class="section-title">
+            <i class="bi bi-server me-2"></i>
+            <span class="status-indicator status-good"></span>
+            Server Monitoring
+            <small class="text-muted" style="font-size: 0.8rem;">(Auto-refresh every 5 seconds)</small>
+        </h3>
+        
+        <!-- Real-time Metrics Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card dashboard-card metric-card">
+                    <div class="metric-label">CPU Usage</div>
+                    <div class="metric-value text-primary" id="cpu-value">--</div>
+                    <small class="text-muted"><span id="cpu-cores">--</span> Cores</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card metric-card">
+                    <div class="metric-label">Memory Usage</div>
+                    <div class="metric-value text-success" id="memory-value">--</div>
+                    <small class="text-muted"><span id="memory-used">--</span> / <span id="memory-total">--</span> GB</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card metric-card">
+                    <div class="metric-label">Disk Usage</div>
+                    <div class="metric-value text-warning" id="disk-value">--</div>
+                    <small class="text-muted"><span id="disk-used">--</span> / <span id="disk-total">--</span> GB</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card metric-card">
+                    <div class="metric-label">Processes</div>
+                    <div class="metric-value text-info" id="process-value">--</div>
+                    <small class="text-muted">Uptime: <span id="uptime-value">--</span>h</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts -->
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-cpu me-2"></i>CPU Usage History
+                        </h5>
+                        <div class="chart-container">
+                            <canvas id="cpuChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-memory me-2"></i>Memory Usage History
+                        </h5>
+                        <div class="chart-container">
+                            <canvas id="memoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+    // Chart configurations
+    const chartConfig = {
+        type: 'line',
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            animation: {
+                duration: 500
+            }
+        }
+    };
+    
+    // Initialize CPU Chart
+    const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+    const cpuChart = new Chart(cpuCtx, {
+        ...chartConfig,
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'CPU Usage',
+                data: [],
+                borderColor: 'rgb(102, 126, 234)',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        }
+    });
+    
+    // Initialize Memory Chart
+    const memoryCtx = document.getElementById('memoryChart').getContext('2d');
+    const memoryChart = new Chart(memoryCtx, {
+        ...chartConfig,
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Memory Usage',
+                data: [],
+                borderColor: 'rgb(40, 167, 69)',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        }
+    });
+    
+    // Keep track of data points (max 20)
+    const maxDataPoints = 20;
+    
+    // Function to update charts
+    function updateCharts(metrics) {
+        const now = new Date();
+        const timeLabel = now.toLocaleTimeString();
+        
+        // Update CPU Chart
+        cpuChart.data.labels.push(timeLabel);
+        cpuChart.data.datasets[0].data.push(metrics.cpu.percent);
+        
+        if (cpuChart.data.labels.length > maxDataPoints) {
+            cpuChart.data.labels.shift();
+            cpuChart.data.datasets[0].data.shift();
+        }
+        
+        cpuChart.update();
+        
+        // Update Memory Chart
+        memoryChart.data.labels.push(timeLabel);
+        memoryChart.data.datasets[0].data.push(metrics.memory.percent);
+        
+        if (memoryChart.data.labels.length > maxDataPoints) {
+            memoryChart.data.labels.shift();
+            memoryChart.data.datasets[0].data.shift();
+        }
+        
+        memoryChart.update();
+    }
+    
+    // Function to update metric cards
+    function updateMetricCards(metrics) {
+        // CPU
+        document.getElementById('cpu-value').textContent = metrics.cpu.percent + '%';
+        document.getElementById('cpu-cores').textContent = metrics.cpu.count;
+        
+        // Memory
+        document.getElementById('memory-value').textContent = metrics.memory.percent + '%';
+        document.getElementById('memory-used').textContent = metrics.memory.used_gb;
+        document.getElementById('memory-total').textContent = metrics.memory.total_gb;
+        
+        // Disk
+        document.getElementById('disk-value').textContent = metrics.disk.percent + '%';
+        document.getElementById('disk-used').textContent = metrics.disk.used_gb;
+        document.getElementById('disk-total').textContent = metrics.disk.total_gb;
+        
+        // Process
+        document.getElementById('process-value').textContent = metrics.system.process_count;
+        document.getElementById('uptime-value').textContent = metrics.system.uptime_hours;
+    }
+    
+    // Function to fetch metrics
+    async function fetchMetrics() {
+        try {
+            const response = await fetch('{% url "web:system_metrics" %}');
+            if (response.ok) {
+                const metrics = await response.json();
+                updateMetricCards(metrics);
+                updateCharts(metrics);
+            } else {
+                console.error('Failed to fetch metrics');
+            }
+        } catch (error) {
+            console.error('Error fetching metrics:', error);
+        }
+    }
+    
+    // Fetch metrics immediately on load
+    fetchMetrics();
+    
+    // Refresh metrics every 5 seconds
+    setInterval(fetchMetrics, 5000);
+</script>
+{% endblock %}

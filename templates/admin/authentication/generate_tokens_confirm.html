@@ -1,0 +1,60 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:authentication_tokenuser_changelist' %}">Token Users</a>
+&rsaquo; <a href="{% url 'admin:authentication_tokenuser_change' token_user.pk %}">{{ token_user.name }}</a>
+&rsaquo; Generate Tokens
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<div class="module aligned">
+    <h2>Confirm Token Generation</h2>
+    
+    <div class="form-row">
+        <div class="form-row">
+            <strong>Token User:</strong> {{ token_user.name }} ({{ token_user.company|default:"No Company" }})
+        </div>
+        <div class="form-row">
+            <strong>Email:</strong> {{ token_user.email|default:"No Email" }}
+        </div>
+        <div class="form-row">
+            <strong>Status:</strong> 
+            {% if token_user.is_active %}
+                <span style="color: green;">Active</span>
+            {% else %}
+                <span style="color: red;">Inactive</span>
+            {% endif %}
+        </div>
+        <div class="form-row">
+            <strong>Current Active Tokens:</strong> {{ token_user.tokens.filter.is_active.count }}
+        </div>
+        <div class="form-row">
+            <strong>Access Token Lifetime:</strong> {{ token_user.access_token_lifetime_hours }} hours
+        </div>
+        <div class="form-row">
+            <strong>Refresh Token Lifetime:</strong> {{ token_user.refresh_token_lifetime_days }} days
+        </div>
+    </div>
+    
+    <div class="submit-row">
+        <form method="post" action="">
+            {% csrf_token %}
+            <input type="submit" value="Generate New Tokens" class="default" style="background: #417690; color: white; padding: 10px 15px; border: none; border-radius: 3px; margin-right: 10px;">
+            <a href="{% url 'admin:authentication_tokenuser_change' token_user.pk %}" style="padding: 10px 15px; background: #f0f0f0; text-decoration: none; border-radius: 3px;">Cancel</a>
+        </form>
+    </div>
+    
+    <div class="help" style="margin-top: 20px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">
+        <strong>Note:</strong> This will create new access and refresh tokens for this user. 
+        The tokens will be displayed only once after generation. Make sure to copy them immediately.
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "web/base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+        <div class="card">
+            <div class="card-body p-5">
+                <div class="logo-container">
+                    <h1 class="logo-text">
+                        <i class="bi bi-shield-lock-fill"></i>
+                        SEU API
+                    </h1>
+                    <p class="subtitle">API Management Portal</p>
+                </div>
+                
+                <h4 class="text-center mb-4">Sign In</h4>
+                
+                {% if sso_enabled %}
+                <!-- SSO Login Button -->
+                <div class="d-grid gap-3">
+                    <a href="{% url 'web:sso_login' %}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>
+                        Sign in with WSO2 SSO
+                    </a>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <small class="text-muted">
+                        <i class="bi bi-shield-check me-1"></i>
+                        Secure authentication powered by WSO2
+                    </small>
+                </div>
+                {% else %}
+                <!-- Local Login Form -->
+                <form method="post" action="{% url 'web:login' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="password" class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>
+                            Sign In
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <small class="text-muted">SSO is currently disabled</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="text-center mt-3">
+            <small class="text-white">
+                <i class="bi bi-info-circle me-1"></i>
+                Need help? Contact your system administrator
+            </small>
+        </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

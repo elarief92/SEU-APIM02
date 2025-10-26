@@ -1,0 +1,480 @@
+{% extends 'web/base.html' %}
+{% load static %}
+
+{% block body_class %} class="app-body"{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-2 fw-bold">Request Logs</h1>
+            <p class="text-muted mb-0">Monitor and search API request logs</p>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="text-muted">
+                <i class="bi bi-clock-history"></i> Showing {{ total_entries }} request{{ total_entries|pluralize }}
+            </div>
+            <button class="btn btn-outline-success btn-sm" onclick="exportLogs()" title="Export filtered logs">
+                <i class="bi bi-download me-1"></i> Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" action="{% url 'web:logs_viewer' %}" id="filterForm">
+                <div class="row g-3">
+                    <!-- Log File Selection -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-file-earmark-text me-1"></i>Log File
+                        </label>
+                        <select name="log_file" class="form-select" onchange="document.getElementById('filterForm').submit()">
+                            {% for log in available_logs %}
+                            <option value="{{ log.name }}" {% if log.name == selected_log %}selected{% endif %}>
+                                {{ log.name }} ({{ log.size_display }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Search -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-search me-1"></i>Search
+                        </label>
+                        <input type="text" 
+                               name="search" 
+                               class="form-control" 
+                               placeholder="Search path or message..."
+                               value="{{ search_query }}">
+                    </div>
+
+                    <!-- HTTP Method Filter -->
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-broadcast me-1"></i>Method
+                        </label>
+                        <select name="method" class="form-select">
+                            <option value="">All Methods</option>
+                            {% for method in unique_methods %}
+                            <option value="{{ method }}" {% if method == method_filter %}selected{% endif %}>
+                                {{ method }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Status Code Filter -->
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-shield-check me-1"></i>Status
+                        </label>
+                        <select name="status" class="form-select">
+                            <option value="">All Status</option>
+                            {% for status in unique_status_codes %}
+                            <option value="{{ status }}" {% if status|stringformat:"s" == status_filter %}selected{% endif %}>
+                                {{ status }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Log Level Filter -->
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-flag me-1"></i>Level
+                        </label>
+                        <select name="level" class="form-select">
+                            <option value="">All Levels</option>
+                            {% for level in unique_levels %}
+                            <option value="{{ level }}" {% if level == level_filter %}selected{% endif %}>
+                                {{ level }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Date Range -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-calendar-range me-1"></i>Start Date
+                        </label>
+                        <input type="date" 
+                               name="start_date" 
+                               class="form-control" 
+                               value="{{ start_date }}">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-calendar-range me-1"></i>End Date
+                        </label>
+                        <input type="date" 
+                               name="end_date" 
+                               class="form-control" 
+                               value="{{ end_date }}">
+                    </div>
+
+                    <!-- Show Only Requests Toggle -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-filter me-1"></i>Filter Type
+                        </label>
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   name="show_only_requests" 
+                                   id="showOnlyRequests" 
+                                   value="true"
+                                   {% if show_only_requests %}checked{% endif %}>
+                            <label class="form-check-label" for="showOnlyRequests">
+                                HTTP Requests Only
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-sm btn-primary me-2">
+                            <i class="bi bi-funnel"></i> Apply Filters
+                        </button>
+                        <a href="{% url 'web:logs_viewer' %}?log_file={{ selected_log }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            {% if entries %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 logs-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="fw-semibold text-dark" style="width: 140px;">Timestamp</th>
+                            <th class="fw-semibold text-dark" style="width: 150px;">Application</th>
+                            <th class="fw-semibold text-dark" style="width: 80px;">Method</th>
+                            <th class="fw-semibold text-dark">Path</th>
+                            <th class="fw-semibold text-dark" style="width: 90px;">Status</th>
+                            <th class="fw-semibold text-dark" style="width: 100px;">Duration</th>
+                            <th class="fw-semibold text-dark" style="width: 80px;">Level</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in entries %}
+                        <tr class="log-row" onclick="toggleDetails(this)">
+                            <td>
+                                <small class="text-muted">
+                                    {{ entry.timestamp|date:"Y-m-d H:i:s" }}
+                                </small>
+                            </td>
+                            <td>
+                                {% if entry.app_name %}
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-building me-2 text-primary"></i>
+                                    <span class="fw-medium">{{ entry.app_name }}</span>
+                                </div>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if entry.method %}
+                                <span class="badge method-badge method-{{ entry.method }}">
+                                    {{ entry.method }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if entry.path %}
+                                <code class="path-code">{{ entry.path }}</code>
+                                {% else %}
+                                <span class="text-muted text-truncate d-inline-block" style="max-width: 500px;">
+                                    {{ entry.message }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if entry.status_code %}
+                                <span class="badge bg-{{ entry.get_status_class }}">
+                                    {{ entry.status_code }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if entry.duration %}
+                                <small class="text-muted">{{ entry.duration|floatformat:3 }}s</small>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge level-{{ entry.level|lower }}">
+                                    {{ entry.level }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="log-details" style="display: none;">
+                            <td colspan="7" class="bg-light">
+                                <div class="p-3">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <strong>Full Message:</strong>
+                                            <pre class="mb-2 mt-1">{{ entry.message }}</pre>
+                                        </div>
+                                        <div class="col-md-4">
+                                            {% if entry.app_name %}
+                                            <div class="mb-2">
+                                                <strong>Application:</strong>
+                                                <div class="mt-1">
+                                                    <i class="bi bi-building me-2 text-primary"></i>
+                                                    <span>{{ entry.app_name }}</span>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                            {% if entry.duration %}
+                                            <div class="mb-2">
+                                                <strong>Response Time:</strong>
+                                                <div class="mt-1">
+                                                    <i class="bi bi-clock me-2 text-success"></i>
+                                                    <span>{{ entry.duration|floatformat:3 }}s</span>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if entry.file_path %}
+                                    <div class="mt-2">
+                                        <strong>File:</strong>
+                                        <small class="text-muted d-block mt-1">{{ entry.file_path }}</small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if entries.has_other_pages %}
+            <div class="d-flex justify-content-between align-items-center p-3 border-top">
+                <div class="text-muted">
+                    Showing {{ entries.start_index }} - {{ entries.end_index }} of {{ entries.paginator.count }} entries
+                </div>
+                <nav>
+                    <ul class="pagination mb-0">
+                        {% if entries.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if method_filter %}&method={{ method_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if level_filter %}&level={{ level_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}&log_file={{ selected_log }}&show_only_requests={{ show_only_requests|yesno:"true,false" }}">
+                                First
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ entries.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if method_filter %}&method={{ method_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if level_filter %}&level={{ level_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}&log_file={{ selected_log }}&show_only_requests={{ show_only_requests|yesno:"true,false" }}">
+                                Previous
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">Page {{ entries.number }} of {{ entries.paginator.num_pages }}</span>
+                        </li>
+
+                        {% if entries.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ entries.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if method_filter %}&method={{ method_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if level_filter %}&level={{ level_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}&log_file={{ selected_log }}&show_only_requests={{ show_only_requests|yesno:"true,false" }}">
+                                Next
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ entries.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if method_filter %}&method={{ method_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if level_filter %}&level={{ level_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}&log_file={{ selected_log }}&show_only_requests={{ show_only_requests|yesno:"true,false" }}">
+                                Last
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted mb-3"></i>
+                <h5 class="text-muted">No log entries found</h5>
+                <p class="text-muted">Try adjusting your filters or select a different log file.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+/* Table Styling */
+.logs-table {
+    font-size: 0.9rem;
+}
+
+.logs-table thead th {
+    border-bottom: 2px solid #dee2e6;
+    padding: 1rem 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    color: #495057;
+}
+
+.logs-table tbody td {
+    padding: 0.875rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.log-row {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.log-row:hover {
+    background-color: rgba(27, 131, 84, 0.04);
+}
+
+.log-details pre {
+    background-color: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    border: 1px solid #dee2e6;
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Method Badges */
+.method-badge {
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 0.35rem 0.6rem;
+}
+
+.method-GET { background-color: #17a2b8; color: white; }
+.method-POST { background-color: #28a745; color: white; }
+.method-PUT { background-color: #ffc107; color: #212529; }
+.method-DELETE { background-color: #dc3545; color: white; }
+.method-PATCH { background-color: #6c757d; color: white; }
+
+/* Level Badges */
+.level-debug { background-color: #6c757d; color: white; }
+.level-info { background-color: #17a2b8; color: white; }
+.level-warning { background-color: #ffc107; color: #212529; }
+.level-error { background-color: #dc3545; color: white; }
+.level-critical { background-color: #721c24; color: white; }
+
+/* Path Code */
+.path-code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    background-color: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    color: #495057;
+}
+
+/* Form Styling */
+.form-control:focus,
+.form-select:focus {
+    border-color: #1B8354;
+    box-shadow: 0 0 0 0.2rem rgba(27, 131, 84, 0.25);
+}
+
+.form-check-input:checked {
+    background-color: #1B8354;
+    border-color: #1B8354;
+}
+
+/* Pagination */
+.pagination .page-link {
+    color: #1B8354;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #1B8354;
+    border-color: #1B8354;
+}
+
+.pagination .page-link:hover {
+    color: #146640;
+}
+</style>
+
+<script>
+function toggleDetails(row) {
+    const detailsRow = row.nextElementSibling;
+    if (detailsRow && detailsRow.classList.contains('log-details')) {
+        if (detailsRow.style.display === 'none' || detailsRow.style.display === '') {
+            detailsRow.style.display = 'table-row';
+        } else {
+            detailsRow.style.display = 'none';
+        }
+    }
+}
+
+function exportLogs() {
+    // Get all visible log entries
+    const table = document.querySelector('.logs-table');
+    const rows = table.querySelectorAll('tbody tr.log-row');
+    
+    // Create CSV content
+    let csvContent = 'Timestamp,Application,Method,Path,Status,Duration,Level,Message\n';
+    
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const timestamp = cells[0].textContent.trim();
+        const application = cells[1].textContent.trim().replace(/"/g, '""');
+        const method = cells[2].textContent.trim();
+        const path = cells[3].textContent.trim().replace(/"/g, '""');
+        const status = cells[4].textContent.trim();
+        const duration = cells[5].textContent.trim();
+        const level = cells[6].textContent.trim();
+        
+        // Get message from details row
+        const detailsRow = row.nextElementSibling;
+        let message = '';
+        if (detailsRow && detailsRow.classList.contains('log-details')) {
+            const pre = detailsRow.querySelector('pre');
+            if (pre) {
+                message = pre.textContent.trim().replace(/"/g, '""');
+            }
+        }
+        
+        csvContent += `"${timestamp}","${application}","${method}","${path}","${status}","${duration}","${level}","${message}"\n`;
+    });
+    
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `logs_${new Date().toISOString().slice(0,10)}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
+{% endblock %}
+

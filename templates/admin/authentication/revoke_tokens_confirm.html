@@ -1,0 +1,82 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:authentication_tokenuser_changelist' %}">Token Users</a>
+&rsaquo; <a href="{% url 'admin:authentication_tokenuser_change' token_user.pk %}">{{ token_user.name }}</a>
+&rsaquo; Revoke Tokens
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<div class="module aligned">
+    <h2>Confirm Token Revocation</h2>
+    
+    <div class="form-row">
+        <div class="form-row">
+            <strong>Token User:</strong> {{ token_user.name }} ({{ token_user.company|default:"No Company" }})
+        </div>
+        <div class="form-row">
+            <strong>Email:</strong> {{ token_user.email|default:"No Email" }}
+        </div>
+        <div class="form-row">
+            <strong>Active Tokens to Revoke:</strong> {{ active_count }}
+        </div>
+    </div>
+    
+    {% if active_count > 0 %}
+        <div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; margin: 10px 0; border-radius: 4px;">
+            <strong>⚠️ Warning:</strong> This action will immediately revoke all active tokens for this user. 
+            The user will lose API access until new tokens are generated.
+        </div>
+        
+        {% if active_tokens %}
+        <div class="results">
+            <table style="width: 100%; margin: 10px 0;">
+                <thead>
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 8px; text-align: left;">Token Type</th>
+                        <th style="padding: 8px; text-align: left;">Created</th>
+                        <th style="padding: 8px; text-align: left;">Expires</th>
+                        <th style="padding: 8px; text-align: left;">Usage Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for token in active_tokens %}
+                    <tr style="border-bottom: 1px solid #dee2e6;">
+                        <td style="padding: 8px;">{{ token.token_type|capfirst }}</td>
+                        <td style="padding: 8px;">{{ token.created_at|date:"M d, Y H:i" }}</td>
+                        <td style="padding: 8px;">{{ token.expires_at|date:"M d, Y H:i" }}</td>
+                        <td style="padding: 8px;">{{ token.usage_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        
+        <div class="submit-row">
+            <form method="post" action="">
+                {% csrf_token %}
+                <input type="submit" value="Revoke All Tokens" class="deletelink" style="background: #ba2121; color: white; padding: 10px 15px; border: none; border-radius: 3px; margin-right: 10px;">
+                <a href="{% url 'admin:authentication_tokenuser_change' token_user.pk %}" style="padding: 10px 15px; background: #f0f0f0; text-decoration: none; border-radius: 3px;">Cancel</a>
+            </form>
+        </div>
+        
+    {% else %}
+        <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 10px; margin: 10px 0; border-radius: 4px;">
+            <strong>ℹ️ Info:</strong> This user has no active tokens to revoke.
+        </div>
+        
+        <div class="submit-row">
+            <a href="{% url 'admin:authentication_tokenuser_change' token_user.pk %}" style="padding: 10px 15px; background: #f0f0f0; text-decoration: none; border-radius: 3px;">Back to User</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,498 @@
+{% extends "web/base.html" %}
+
+{% block body_class %} class="app-body"{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'web:tokens_list' %}">Tokens</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ token_user.name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-box-seam text-primary me-2"></i>
+                {{ token_user.name }}
+            </h2>
+            <p class="text-muted mb-0">Application Details & Management</p>
+        </div>
+        <div>
+            <a href="{% url 'web:token_permissions' token_user.id %}" class="btn btn-outline-primary me-2">
+                <i class="bi bi-shield-lock me-1"></i> Manage Permissions
+            </a>
+            <a href="{% url 'web:token_refresh' token_user.id %}" class="btn btn-success" 
+               onclick="return confirm('Are you sure you want to refresh the tokens? Old tokens will be invalid.');">
+                <i class="bi bi-arrow-clockwise me-1"></i> Refresh Tokens
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-primary bg-opacity-10 text-primary rounded-circle p-3 me-3">
+                            <i class="bi bi-telephone-outbound fs-4"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 text-muted">Total Calls</h6>
+                            <h3 class="mb-0">{{ stats.total_calls }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-success bg-opacity-10 text-success rounded-circle p-3 me-3">
+                            <i class="bi bi-check-circle fs-4"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 text-muted">Success Rate</h6>
+                            <h3 class="mb-0">{{ stats.success_rate|floatformat:1 }}%</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-warning bg-opacity-10 text-warning rounded-circle p-3 me-3">
+                            <i class="bi bi-clock-history fs-4"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 text-muted">Avg Duration</h6>
+                            <h3 class="mb-0">{{ stats.avg_duration|floatformat:2 }}s</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-info bg-opacity-10 text-info rounded-circle p-3 me-3">
+                            <i class="bi bi-shield-lock fs-4"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 text-muted">Permissions</h6>
+                            <h3 class="mb-0">{{ stats.total_permissions }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+            <!-- Basic Information -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Basic Information</h5>
+                </div>
+                <div class="card-body">
+                    <form id="editForm" method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Application Name</label>
+                                <input type="text" class="form-control" name="name" value="{{ token_user.name }}" required disabled id="name-input">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Email</label>
+                                <input type="email" class="form-control" name="email" value="{{ token_user.email }}" required disabled id="email-input">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Company</label>
+                                <input type="text" class="form-control" name="company" value="{{ token_user.company|default:'' }}" disabled id="company-input">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Status</label>
+                                <div>
+                                    {% if token_user.is_active %}
+                                        <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary fs-6"><i class="bi bi-x-circle me-1"></i>Inactive</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Notes</label>
+                                <textarea class="form-control" name="notes" rows="3" disabled id="notes-input">{{ token_user.notes|default:'' }}</textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Created</label>
+                                <p class="form-control-plaintext">{{ token_user.created_at|date:"F d, Y H:i" }}</p>
+                            </div>
+                        </div>
+                        <div class="mt-3" id="edit-actions" style="display: none;">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>Save Changes
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="cancelEdit()">
+                                <i class="bi bi-x-lg me-1"></i>Cancel
+                            </button>
+                        </div>
+                    </form>
+                    <div class="mt-3" id="edit-button">
+                        <button type="button" class="btn btn-outline-primary" onclick="enableEdit()">
+                            <i class="bi bi-pencil me-1"></i>Edit Information
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent API Calls -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-activity me-2"></i>Recent API Calls</h5>
+                    <small class="text-muted">Last 10 requests</small>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_calls %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Status</th>
+                                    <th>Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for call in recent_calls %}
+                                <tr>
+                                    <td>
+                                        <span class="badge 
+                                            {% if call.method == 'GET' %}bg-primary
+                                            {% elif call.method == 'POST' %}bg-success
+                                            {% elif call.method == 'PUT' %}bg-warning
+                                            {% elif call.method == 'DELETE' %}bg-danger
+                                            {% endif %}">
+                                            {{ call.method }}
+                                        </span>
+                                    </td>
+                                    <td><code>{{ call.path }}</code></td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if call.status < 300 %}bg-success
+                                            {% elif call.status < 400 %}bg-info
+                                            {% elif call.status < 500 %}bg-warning
+                                            {% else %}bg-danger
+                                            {% endif %}">
+                                            {{ call.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ call.duration|floatformat:3 }}s</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                        <p>No recent API calls found</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Subscribed Endpoints -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Subscribed Endpoints</h5>
+                    <a href="{% url 'web:token_permissions' token_user.id %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-plus-circle me-1"></i>Manage
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    {% if subscribed_endpoints %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Endpoint</th>
+                                    <th>Category</th>
+                                    <th>Granted</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for endpoint in subscribed_endpoints %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ endpoint.name }}</strong>
+                                    </td>
+                                    <td><code>{{ endpoint.url_pattern }}</code></td>
+                                    <td>
+                                        <span class="badge bg-info">{{ endpoint.category }}</span>
+                                    </td>
+                                    <td class="text-muted">{{ endpoint.granted_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-shield-x display-4 d-block mb-2"></i>
+                        <p>No endpoints granted yet</p>
+                        <a href="{% url 'web:token_permissions' token_user.id %}" class="btn btn-primary mt-2">
+                            <i class="bi bi-plus-circle me-1"></i>Grant Permissions
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-4">
+            <!-- Token Information -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-key me-2"></i>Access Token</h5>
+                </div>
+                <div class="card-body">
+                    {% if access_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Token</label>
+                        <div class="input-group input-group-sm">
+                            <input type="password" class="form-control font-monospace" value="{{ access_token.token }}" readonly id="access-token-display">
+                            <button class="btn btn-outline-secondary" onclick="toggleToken('access')" id="toggle-access-btn">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="copyToken('{{ access_token.token }}', this)">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Expires</label>
+                        <p class="mb-0">{{ access_token.expires_at|date:"F d, Y H:i" }}</p>
+                    </div>
+                    <div>
+                        <label class="form-label fw-bold small">Status</label>
+                        <p class="mb-0">
+                            {% if access_token.is_active %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary"><i class="bi bi-x-circle me-1"></i>Inactive</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-key-slash display-6 d-block mb-2"></i>
+                        <p class="mb-0">No active access token</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-arrow-clockwise me-2"></i>Refresh Token</h5>
+                </div>
+                <div class="card-body">
+                    {% if refresh_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Token</label>
+                        <div class="input-group input-group-sm">
+                            <input type="password" class="form-control font-monospace" value="{{ refresh_token.token }}" readonly id="refresh-token-display">
+                            <button class="btn btn-outline-secondary" onclick="toggleToken('refresh')" id="toggle-refresh-btn">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="copyToken('{{ refresh_token.token }}', this)">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Expires</label>
+                        <p class="mb-0">{{ refresh_token.expires_at|date:"F d, Y H:i" }}</p>
+                    </div>
+                    <div>
+                        <label class="form-label fw-bold small">Status</label>
+                        <p class="mb-0">
+                            {% if refresh_token.is_active %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary"><i class="bi bi-x-circle me-1"></i>Inactive</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-key-slash display-6 d-block mb-2"></i>
+                        <p class="mb-0">No active refresh token</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'web:token_permissions' token_user.id %}" class="btn btn-outline-primary">
+                            <i class="bi bi-shield-lock me-2"></i>Manage Permissions
+                        </a>
+                        <a href="{% url 'web:token_refresh' token_user.id %}" class="btn btn-outline-success"
+                           onclick="return confirm('Refresh tokens? Old tokens will be invalid.');">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Refresh Tokens
+                        </a>
+                        <a href="{% url 'web:logs_viewer' %}?search={{ token_user.name }}" class="btn btn-outline-info">
+                            <i class="bi bi-file-text me-2"></i>View Logs
+                        </a>
+                        {% if token_user.is_active %}
+                        <form method="post" action="{% url 'web:token_revoke' token_user.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger w-100"
+                                    onclick="return confirm('Revoke token? Application will lose API access immediately.');">
+                                <i class="bi bi-x-circle me-2"></i>Revoke Token
+                            </button>
+                        </form>
+                        {% else %}
+                        <form method="post" action="{% url 'web:token_activate' token_user.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-success w-100"
+                                    onclick="return confirm('Activate token? Application will regain API access.');">
+                                <i class="bi bi-check-circle me-2"></i>Activate Token
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.breadcrumb {
+    background: none;
+    padding: 0;
+}
+
+.breadcrumb-item a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+    text-decoration: underline;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card {
+    border-radius: 12px;
+}
+
+.card-header {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+}
+
+.form-control:disabled,
+.form-control-plaintext {
+    background-color: #f8f9fa;
+}
+</style>
+
+<script>
+function enableEdit() {
+    document.getElementById('name-input').disabled = false;
+    document.getElementById('email-input').disabled = false;
+    document.getElementById('company-input').disabled = false;
+    document.getElementById('notes-input').disabled = false;
+    
+    document.getElementById('edit-button').style.display = 'none';
+    document.getElementById('edit-actions').style.display = 'block';
+}
+
+function cancelEdit() {
+    document.getElementById('editForm').reset();
+    
+    document.getElementById('name-input').disabled = true;
+    document.getElementById('email-input').disabled = true;
+    document.getElementById('company-input').disabled = true;
+    document.getElementById('notes-input').disabled = true;
+    
+    document.getElementById('edit-button').style.display = 'block';
+    document.getElementById('edit-actions').style.display = 'none';
+}
+
+function toggleToken(type) {
+    const input = document.getElementById(`${type}-token-display`);
+    const button = document.getElementById(`toggle-${type}-btn`);
+    const icon = button.querySelector('i');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+        // Scroll to the beginning of the token
+        setTimeout(() => {
+            input.scrollLeft = 0;
+            input.setSelectionRange(0, 0);
+        }, 0);
+    } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+}
+
+function copyToken(text, button) {
+    navigator.clipboard.writeText(text).then(function() {
+        const icon = button.querySelector('i');
+        const originalClass = icon.className;
+        icon.className = 'bi bi-check';
+        button.classList.remove('btn-outline-secondary');
+        button.classList.add('btn-success');
+        
+        setTimeout(function() {
+            icon.className = originalClass;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-secondary');
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Failed to copy: ', err);
+        alert('Failed to copy token');
+    });
+}
+</script>
+{% endblock %}
+

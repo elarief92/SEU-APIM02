@@ -1,0 +1,373 @@
+{% extends 'web/base.html' %}
+{% load static %}
+
+{% block body_class %} class="app-body"{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-2 fw-bold">Application Tokens</h1>
+            <p class="text-muted mb-0">Manage API access tokens for your applications</p>
+        </div>
+        <a href="{% url 'web:token_create' %}" class="btn btn-primary btn-sm shadow-sm">
+            <i class="bi bi-plus-circle me-2"></i>Create New Application
+        </a>
+    </div>
+
+    <!-- Tokens Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            {% if tokens %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 tokens-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="fw-semibold text-dark ps-4">Application Name</th>
+                            <th class="fw-semibold text-dark">Email</th>
+                            <th class="fw-semibold text-dark">Token Key</th>
+                            <th class="fw-semibold text-dark">Status</th>
+                            <th class="fw-semibold text-dark">Permissions</th>
+                            <th class="fw-semibold text-dark">Created</th>
+                            <th class="fw-semibold text-dark text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for token in tokens %}
+                        <tr class="token-row">
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="token-icon me-3">
+                                        <i class="bi bi-box-seam text-primary"></i>
+                                    </div>
+                                    <a href="{% url 'web:token_detail' token.id %}" class="text-dark text-decoration-none app-name-link">
+                                        <strong>{{ token.name }}</strong>
+                                    </a>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="text-muted">{{ token.email }}</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <code class="token-key me-2">{{ token.token_key }}</code>
+                                    {% if token.full_token %}
+                                    <button class="btn btn-sm btn-outline-secondary copy-btn" 
+                                            onclick="copyToClipboard('{{ token.full_token }}', this)"
+                                            title="Copy Full Token"
+                                            data-bs-toggle="tooltip">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if token.is_active and token.has_active_token %}
+                                    <span class="badge badge-success">
+                                        <i class="bi bi-check-circle me-1"></i>Active
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-secondary">
+                                        <i class="bi bi-x-circle me-1"></i>Inactive
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-permissions">
+                                    <i class="bi bi-shield-lock me-1"></i>{{ token.permissions_count }} endpoint{{ token.permissions_count|pluralize }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="text-muted">{{ token.created_at|date:"Y-m-d H:i" }}</span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'web:token_permissions' token_id=token.id %}" 
+                                       class="btn btn-sm btn-outline-primary action-btn" 
+                                       title="Manage Permissions"
+                                       data-bs-toggle="tooltip">
+                                        <i class="bi bi-shield-check"></i>
+                                    </a>
+                                    {% if token.is_active %}
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-danger action-btn" 
+                                            title="Revoke Token"
+                                            data-bs-toggle="tooltip"
+                                            onclick="revokeToken('{{ token.id }}', '{{ token.name }}')">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                    {% else %}
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-success action-btn" 
+                                            title="Activate Token"
+                                            data-bs-toggle="tooltip"
+                                            onclick="activateToken('{{ token.id }}', '{{ token.name }}')">
+                                        <i class="bi bi-check-circle"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="empty-state">
+                    <i class="bi bi-key display-1 text-muted mb-4"></i>
+                    <h5 class="text-dark mb-2">No tokens found</h5>
+                    <p class="text-muted mb-4">Create your first application token to get started.</p>
+                    <a href="{% url 'web:token_create' %}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-plus-circle me-2"></i>Create Token
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Hidden forms for revoke actions -->
+{% for token in tokens %}
+<form id="revokeForm-{{ token.id }}" method="post" action="{% url 'web:token_revoke' token.id %}" style="display: none;">
+    {% csrf_token %}
+</form>
+<form id="activateForm-{{ token.id }}" method="post" action="{% url 'web:token_activate' token.id %}" style="display: none;">
+    {% csrf_token %}
+</form>
+{% endfor %}
+
+<style>
+/* Table Styling */
+.tokens-table {
+    font-size: 0.95rem;
+}
+
+.tokens-table thead th {
+    border-bottom: 2px solid #dee2e6;
+    padding: 1rem 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    color: #495057;
+}
+
+.tokens-table tbody td {
+    padding: 1.25rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.token-row {
+    transition: all 0.2s ease;
+}
+
+.token-row:hover {
+    background-color: rgba(27, 131, 84, 0.04);
+    box-shadow: inset 4px 0 0 var(--primary-color);
+}
+
+/* Token Icon */
+.token-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(27, 131, 84, 0.1) 0%, rgba(27, 131, 84, 0.05) 100%);
+    border-radius: 10px;
+}
+
+.token-icon i {
+    font-size: 1.25rem;
+}
+
+/* Token Key Display */
+.token-key {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    color: #495057;
+    white-space: nowrap;
+}
+
+/* Badge Styling */
+.badge {
+    padding: 0.5rem 0.9rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 6px;
+    letter-spacing: 0.3px;
+}
+
+.badge-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.badge-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.badge-permissions {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+}
+
+/* Action Buttons */
+.action-btn {
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
+.btn-outline-success {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-success:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* Header Button */
+.btn-primary.btn-lg {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+/* Card Styling */
+.card {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Application Name Link */
+.app-name-link {
+    transition: all 0.2s ease;
+}
+
+.app-name-link:hover {
+    color: var(--primary-color) !important;
+    text-decoration: underline !important;
+}
+
+/* Copy Button Styling */
+.copy-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.copy-btn:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.copy-btn i {
+    font-size: 0.9rem;
+}
+
+/* Empty State */
+.empty-state {
+    padding: 3rem 2rem;
+}
+
+.empty-state i {
+    color: #cbd5e0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .tokens-table {
+        font-size: 0.85rem;
+    }
+    
+    .tokens-table thead th,
+    .tokens-table tbody td {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .token-icon {
+        display: none;
+    }
+}
+</style>
+
+<script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+// Revoke token function
+function revokeToken(tokenId, tokenName) {
+    if (confirm(`Are you sure you want to revoke the token for "${tokenName}"?\n\nThis action cannot be undone and the application will immediately lose API access.`)) {
+        document.getElementById('revokeForm-' + tokenId).submit();
+    }
+}
+
+// Activate token function
+function activateToken(tokenId, tokenName) {
+    if (confirm(`Are you sure you want to activate the token for "${tokenName}"?\n\nThe application will regain API access immediately.`)) {
+        document.getElementById('activateForm-' + tokenId).submit();
+    }
+}
+
+// Copy to clipboard function
+function copyToClipboard(text, button) {
+    navigator.clipboard.writeText(text).then(function() {
+        // Change icon to checkmark
+        const icon = button.querySelector('i');
+        const originalClass = icon.className;
+        icon.className = 'bi bi-check';
+        button.classList.remove('btn-outline-secondary');
+        button.classList.add('btn-success');
+        
+        // Reset after 2 seconds
+        setTimeout(function() {
+            icon.className = originalClass;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-secondary');
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Failed to copy text: ', err);
+        alert('Failed to copy token to clipboard');
+    });
+}
+</script>
+{% endblock %}
+

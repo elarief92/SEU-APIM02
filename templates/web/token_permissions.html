@@ -1,0 +1,378 @@
+{% extends 'web/base.html' %}
+{% load static %}
+
+{% block body_class %} class="app-body"{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'web:tokens_list' %}">Tokens</a></li>
+                <li class="breadcrumb-item active">Manage Permissions</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-2">{{ token_user.name }}</h1>
+                <p class="text-muted mb-0">{{ token_user.email }}</p>
+            </div>
+            <div>
+                <span class="badge bg-success me-2">{{ granted_count }}/{{ total_endpoints }} Endpoints</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Token Alert (shown only after creation) -->
+    {% if request.session.new_access_token %}
+    <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+        <h5 class="alert-heading">
+            <i class="bi bi-check-circle-fill me-2"></i>Token Created Successfully!
+        </h5>
+        <p class="mb-3">Save these tokens securely - they will only be shown once!</p>
+        
+        <div class="token-display mb-3">
+            <label class="fw-bold d-block mb-1">Access Token:</label>
+            <div class="input-group">
+                <input type="text" class="form-control font-monospace" id="newAccessToken" value="{{ request.session.new_access_token }}" readonly>
+                <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('{{ request.session.new_access_token }}', 'Access')">
+                    <i class="bi bi-clipboard"></i> Copy
+                </button>
+            </div>
+            <small class="text-muted">Expires: {{ request.session.token_expires_at }}</small>
+        </div>
+        
+        <div class="token-display">
+            <label class="fw-bold d-block mb-1">Refresh Token:</label>
+            <div class="input-group">
+                <input type="text" class="form-control font-monospace" id="newRefreshToken" value="{{ request.session.new_refresh_token }}" readonly>
+                <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('{{ request.session.new_refresh_token }}', 'Refresh')">
+                    <i class="bi bi-clipboard"></i> Copy
+                </button>
+            </div>
+        </div>
+        
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- Token Information Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">
+                <i class="bi bi-key"></i> Token Information
+            </h5>
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="mb-2">
+                        <strong>Application:</strong>
+                        <span class="ms-2">{{ token_user.name }}</span>
+                        {% if token_user.company %}
+                        <span class="text-muted ms-2">({{ token_user.company }})</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Email:</strong>
+                        <span class="ms-2">{{ token_user.email }}</span>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Token Lifetime:</strong>
+                        <span class="ms-2">Access: {{ token_user.access_token_lifetime_hours }}h | Refresh: {{ token_user.refresh_token_lifetime_days }}d</span>
+                    </div>
+                    {% if token_user.notes %}
+                    <div class="mt-3">
+                        <strong>Notes:</strong>
+                        <p class="text-muted mb-0">{{ token_user.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="mb-2">
+                        <strong>Status:</strong>
+                        {% if token_user.is_active %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Created:</strong>
+                        <span class="text-muted">{{ token_user.created_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <div>
+                        <strong>Created By:</strong>
+                        <span class="text-muted">{{ token_user.created_by }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permissions Management -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-shield-check"></i> Endpoint Permissions
+                        </h5>
+                        <div>
+                            <button type="button" 
+                                    class="btn btn-sm btn-success" 
+                                    onclick="grantSelected()">
+                                <i class="bi bi-check-circle"></i> Grant Access
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-sm btn-danger" 
+                                    onclick="revokeSelected()">
+                                <i class="bi bi-x-circle"></i> Revoke Access
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-sm btn-info" 
+                                    onclick="refreshToken('{{ token_user.id }}', '{{ token_user.name }}')">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh Token
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Search/Filter -->
+                    <div class="mb-3">
+                        <input type="text" 
+                               class="form-control" 
+                               id="searchEndpoints" 
+                               placeholder="Search endpoints by name or URL pattern..."
+                               onkeyup="filterEndpoints()">
+                    </div>
+
+                    <!-- Grant Permission Form (Hidden) -->
+                    <form method="post" id="grantForm" style="display: none;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="grant">
+                        <div id="grantEndpoints"></div>
+                    </form>
+
+                    <!-- Revoke Permission Form (Hidden) -->
+                    <form method="post" id="revokeForm" style="display: none;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="revoke">
+                        <div id="revokeEndpoints"></div>
+                    </form>
+
+                    <!-- Refresh Token Form (Hidden) -->
+                    <form method="post" id="refreshForm" action="{% url 'web:token_refresh' token_user.id %}" style="display: none;">
+                        {% csrf_token %}
+                    </form>
+
+                    <!-- Endpoints by Category -->
+                    {% for category, endpoints in endpoints_by_category.items %}
+                    <div class="endpoint-category mb-4">
+                        <h6 class="text-uppercase text-muted mb-3">
+                            <i class="bi bi-folder"></i> {{ category }}
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-hover endpoint-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th width="40">
+                                            <input type="checkbox" 
+                                                   class="form-check-input select-category" 
+                                                   data-category="{{ category }}">
+                                        </th>
+                                        <th>Endpoint Name</th>
+                                        <th>URL Pattern</th>
+                                        <th>Description</th>
+                                        <th width="100">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for endpoint in endpoints %}
+                                    <tr class="endpoint-row" 
+                                        data-category="{{ category }}"
+                                        data-name="{{ endpoint.name|lower }}"
+                                        data-url="{{ endpoint.url_pattern|lower }}">
+                                        <td>
+                                            <input type="checkbox" 
+                                                   class="form-check-input endpoint-checkbox" 
+                                                   data-endpoint-id="{{ endpoint.id }}"
+                                                   data-has-access="{{ endpoint.has_access|lower }}"
+                                                   data-category="{{ category }}">
+                                        </td>
+                                        <td>
+                                            <strong>{{ endpoint.name }}</strong>
+                                        </td>
+                                        <td>
+                                            <code>{{ endpoint.url_pattern }}</code>
+                                        </td>
+                                        <td class="text-muted">
+                                            {{ endpoint.description|default:"No description" }}
+                                        </td>
+                                        <td>
+                                            {% if endpoint.has_access %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Granted
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-lock"></i> Denied
+                                            </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox display-1 text-muted mb-3"></i>
+                        <h5 class="text-muted">No endpoints available</h5>
+                        <p class="text-muted">Run the populate_endpoints command to import endpoints.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.endpoint-table tbody tr:hover {
+    background-color: rgba(27, 131, 84, 0.05);
+}
+
+code {
+    font-size: 0.85rem;
+    padding: 0.2rem 0.4rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+}
+
+.breadcrumb {
+    background-color: transparent;
+    padding: 0;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb-item a {
+    color: #1B8354;
+    text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+    text-decoration: underline;
+}
+
+.endpoint-category {
+    border-left: 3px solid #1B8354;
+    padding-left: 1rem;
+}
+
+.form-check-input:checked {
+    background-color: #1B8354;
+    border-color: #1B8354;
+}
+</style>
+
+<script>
+function copyToClipboard(text, type) {
+    navigator.clipboard.writeText(text).then(function() {
+        if (type) {
+            alert(type + ' token copied to clipboard!');
+        } else {
+            alert('Token copied to clipboard!');
+        }
+    }, function(err) {
+        alert('Failed to copy token');
+    });
+}
+
+function filterEndpoints() {
+    const searchTerm = document.getElementById('searchEndpoints').value.toLowerCase();
+    const rows = document.querySelectorAll('.endpoint-row');
+    
+    rows.forEach(row => {
+        const name = row.dataset.name;
+        const url = row.dataset.url;
+        
+        if (name.includes(searchTerm) || url.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function grantSelected() {
+    const checkboxes = document.querySelectorAll('.endpoint-checkbox:checked');
+    
+    if (checkboxes.length === 0) {
+        alert('Please select at least one endpoint');
+        return;
+    }
+    
+    // Clear previous inputs
+    document.getElementById('grantEndpoints').innerHTML = '';
+    
+    // Add selected endpoint IDs
+    checkboxes.forEach(checkbox => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'endpoint_ids';
+        input.value = checkbox.dataset.endpointId;
+        document.getElementById('grantEndpoints').appendChild(input);
+    });
+    
+    // Submit form
+    document.getElementById('grantForm').submit();
+}
+
+function revokeSelected() {
+    const checkboxes = document.querySelectorAll('.endpoint-checkbox:checked');
+    
+    if (checkboxes.length === 0) {
+        alert('Please select at least one endpoint');
+        return;
+    }
+    
+    if (!confirm('Are you sure you want to revoke access to the selected endpoints?')) {
+        return;
+    }
+    
+    // Clear previous inputs
+    document.getElementById('revokeEndpoints').innerHTML = '';
+    
+    // Add selected endpoint IDs
+    checkboxes.forEach(checkbox => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'endpoint_ids';
+        input.value = checkbox.dataset.endpointId;
+        document.getElementById('revokeEndpoints').appendChild(input);
+    });
+    
+    // Submit form
+    document.getElementById('revokeForm').submit();
+}
+
+// Refresh token function
+function refreshToken(tokenId, tokenName) {
+    if (confirm(`Are you sure you want to refresh the token for "${tokenName}"?\n\nThis will:\n• Invalidate the current access and refresh tokens\n• Generate new tokens immediately\n• Display the new tokens on this page\n\nMake sure to save the new tokens!`)) {
+        document.getElementById('refreshForm').submit();
+    }
+}
+
+// Category checkbox select all
+document.querySelectorAll('.select-category').forEach(categoryCheckbox => {
+    categoryCheckbox.addEventListener('change', function() {
+        const category = this.dataset.category;
+        const checkboxes = document.querySelectorAll(`.endpoint-checkbox[data-category="${category}"]`);
+        checkboxes.forEach(cb => cb.checked = this.checked);
+    });
+});
+</script>
+{% endblock %}
+
