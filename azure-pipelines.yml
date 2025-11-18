@@ -5,6 +5,8 @@ variables:
 - group: APIM-VARS
 - name: timestamp
   value: $[format('{0:yyyyMMddHHmmss}', pipeline.startTime)]
+- name: buildTimestamp
+  value: $[format('{0:yyyyMMdd-HHmmss}', pipeline.startTime)]
 
 stages:
   - stage: Build
@@ -26,6 +28,7 @@ stages:
             Dockerfile: '$(DOCKERFILE_PATH)'
             tags: |
               $(timestamp)
+              $(buildTimestamp)
               latest
 
         - task: Bash@3
