@@ -1,0 +1,449 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seu-apim
+  namespace: seu-apim
+  labels:
+    app: seu-apim
+    version: v1
+spec:
+  replicas: 3  # Start with 1 for debugging
+  selector:
+    matchLabels:
+      app: seu-apim
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: seu-apim
+        azure.workload.identity/use: "true"    # ONLY ADD THIS
+    spec:
+      serviceAccountName: workload-identity-sa  # ONLY ADD THIS
+      containers:
+      - name: django-api
+        image: apimacr001.azurecr.io/seu-apim:latest
+        ports:
+        - containerPort: 8000
+      
+        # Volume mount for Azure Key Vault secrets
+        volumeMounts:
+        - name: kv-secrets
+          mountPath: "/mnt/secrets-store"
+          readOnly: true
+
+        # Include all your environment variables from before...
+        env:
+        # From secrets - Django & Database
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seu-apim-secrets
+              key: django-secret-key
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: seu-apim-secrets
+              key: database-url
+
+        # From secrets - External Services
+        - name: YAQEEN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: seu-apim-secrets
+              key: yaqeen-username
+        - name: YAQEEN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: seu-apim-secrets
+              key: yaqeen-password
+        - name: SMS_GATEWAY_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seu-apim-secrets
+              key: sms-gateway-key
+        - name: AZURE_OPEN_AI_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seu-apim-secrets
+              key: azure-openai-key
+
+        # From secrets - ERP API Keys
+        - name: ATS_ERP_TEST_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seu-apim-secrets
+              key: ats-erp-test-api-key
+        - name: ATS_ERP_PROD_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seu-apim-secrets
+              key: ats-erp-prod-api-key
+
+        # From secrets - External Databases
+        - name: EJADAH_ERP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: external-db-secrets
+              key: ejadah-password
+        - name: NoorDB_password
+          valueFrom:
+            secretKeyRef:
+              name: external-db-secrets
+              key: noordb-password
+        - name: BANNER_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: external-db-secrets
+              key: banner-db-password
+
+        # From ConfigMap - All other environment variables
+        - name: DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: DEBUG
+        - name: ALLOWED_HOSTS
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: ALLOWED_HOSTS
+        - name: DJANGO_SETTINGS_MODULE
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: DJANGO_SETTINGS_MODULE
+        - name: YAQEEN_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: YAQEEN_BASE_URL
+        - name: NOOR_SOAP_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: NOOR_SOAP_ENDPOINT
+        - name: NOOR_SOAP_ACTION
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: NOOR_SOAP_ACTION
+        - name: DISABILITY_SOAP_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: DISABILITY_SOAP_ENDPOINT
+        - name: DISABILITY_SOAP_ACTION
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: DISABILITY_SOAP_ACTION
+        - name: SOCIAL_SECURITY_SOAP_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: SOCIAL_SECURITY_SOAP_ENDPOINT
+        - name: SOCIAL_SECURITY_SOAP_ACTION
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: SOCIAL_SECURITY_SOAP_ACTION
+        - name: MOAHAL_SOAP_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: MOAHAL_SOAP_ENDPOINT
+        - name: MOAHAL_SOAP_ACTION
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: MOAHAL_SOAP_ACTION
+        - name: QIYAS_SOAP_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: QIYAS_SOAP_ENDPOINT
+        - name: QIYAS_SOAP_ACTION
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: QIYAS_SOAP_ACTION
+        - name: NATIONAL_ADDRESS_SOAP_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: NATIONAL_ADDRESS_SOAP_ENDPOINT
+        - name: NATIONAL_ADDRESS_SOAP_ACTION
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: NATIONAL_ADDRESS_SOAP_ACTION
+        - name: ATS_ERP_TEST_GATEWAY_URL
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: ATS_ERP_TEST_GATEWAY_URL
+        - name: ATS_ERP_TEST_API_KEY_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: ATS_ERP_TEST_API_KEY_NAME
+        - name: ATS_ERP_PROD_GATEWAY_URL
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: ATS_ERP_PROD_GATEWAY_URL
+        - name: ATS_ERP_PROD_API_KEY_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: ATS_ERP_PROD_API_KEY_NAME
+        - name: EJADAH_ERP_URL
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: EJADAH_ERP_URL
+        - name: EJADAH_ERP_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: EJADAH_ERP_USERNAME
+        - name: SMS_GATEWAY_USER
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: SMS_GATEWAY_USER
+        - name: SMS_GATEWAY_SENDER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: SMS_GATEWAY_SENDER_ID
+        - name: SMS_GATEWAY_URL
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: SMS_GATEWAY_URL
+        - name: NoorDB_host
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: NoorDB_host
+        - name: NoorDB_database
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: NoorDB_database
+        - name: NoorDB_username
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: NoorDB_username
+        - name: NoorDB_charset
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: NoorDB_charset
+        - name: NoorDB_prefix
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: NoorDB_prefix
+        - name: NoorDB_prefix_indexes
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: NoorDB_prefix_indexes
+        - name: NoorDB_trust_server_certificate
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: NoorDB_trust_server_certificate
+        - name: BANNER_DB_PROTOCOL
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: BANNER_DB_PROTOCOL
+        - name: BANNER_DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: BANNER_DB_HOST
+        - name: BANNER_DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: BANNER_DB_PORT
+        - name: BANNER_DB_SERVICE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: BANNER_DB_SERVICE_NAME
+        - name: BANNER_DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: BANNER_DB_USER
+        - name: BANNER_DB_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: BANNER_DB_ENABLED
+        - name: AZURE_OPEN_AI_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: AZURE_OPEN_AI_ENDPOINT
+        - name: AZURE_OPEN_AI_MODEL_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: AZURE_OPEN_AI_MODEL_NAME
+        - name: AZURE_OPEN_AI_API_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: AZURE_OPEN_AI_API_VERSION
+        - name: AZURE_OPEN_AI_API_DEPLOYMENT
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: AZURE_OPEN_AI_API_DEPLOYMENT
+        
+                # Test keys from Azure Key Vault (via auto-created Kubernetes secret)
+        - name: TEST_KEY
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key
+        - name: TEST_KEY02
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key02
+        - name: ANY_NEW_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: any-new-secret
+        - name: TEST_KEY03
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key03
+        - name: TEST_KEY04
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key04
+        - name: TEST_KEY05
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key05
+        - name: TEST_KEY06
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key06
+        - name: TEST_KEY07
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key07
+        - name: TEST_KEY08
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key08
+        - name: TEST_KEY09
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key09
+        - name: TEST_KEY10         # ADD THIS
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key10
+        - name: TEST_KEY11         # ADD THIS
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key11
+        - name: TEST_KEY12         # ADD THIS
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key12
+        - name: TEST_KEY13         # ADD THIS
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key13
+        - name: TEST_KEY14         # ADD THIS
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key14
+        - name: TEST_KEY16         # ADD THIS
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key16
+        - name: TEST_KEY17         # ADD THIS
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: test-key17
+        - name: NEW_SECRET         # ADD THIS
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: new-secret
+        - name: SEU_LAST_SECRET         # ADD THIS
+          valueFrom:
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: seu-last-secret
+
+        # FIXED Health Checks - Use TCP socket check instead of HTTP
+        livenessProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 30
+          timeoutSeconds: 3
+
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      # Volumes definition for Azure Key Vault
+      volumes:
+      - name: kv-secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: "azure-kv-seu-apim-config"
