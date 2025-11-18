@@ -5,8 +5,6 @@ variables:
 - group: APIM-VARS
 - name: timestamp
   value: $[format('{0:yyyyMMddHHmmss}', pipeline.startTime)]
-- name: buildTimestamp
-  value: $[format('{0:yyyyMMdd-HHmmss}', pipeline.startTime)]
 
 stages:
   - stage: Build
@@ -18,6 +16,7 @@ stages:
           vmImage: 'ubuntu-latest'
         steps:
         - checkout: self  # Checkout source code
+          fetchDepth: 1
         
         - task: Docker@2
           displayName: Build and Push Docker Image
@@ -28,8 +27,19 @@ stages:
             Dockerfile: '$(DOCKERFILE_PATH)'
             tags: |
               $(timestamp)
-              $(buildTimestamp)
               latest
+        
+        - task: Bash@3
+          displayName: Generate Tags
+          inputs:
+            targetType: 'inline'
+            script: |
+                  TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+                  SHORT_COMMIT=$(git rev-parse --short HEAD)
+                  echo "##vso[task.setvariable variable=buildTimestamp]$TIMESTAMP"
+                  echo "##vso[task.setvariable variable=shortCommitId]$SHORT_COMMIT"
+                  echo "Timestamp: $TIMESTAMP"
+                  echo "Commit ID: $SHORT_COMMIT"
 
         - task: Bash@3
           displayName: List Docker Images
