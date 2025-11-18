@@ -3,6 +3,8 @@ resources:
 
 variables:
 - group: APIM-VARS
+- name: timestamp
+  value: $[format('{0:yyyyMMddHHmmss}', pipeline.startTime)]
 
 stages:
   - stage: Build
@@ -23,7 +25,7 @@ stages:
             command: 'buildAndPush'
             Dockerfile: '$(DOCKERFILE_PATH)'
             tags: |
-              $(Build.BuildId)
+              $(timestamp)
               latest
 
         - task: Bash@3
