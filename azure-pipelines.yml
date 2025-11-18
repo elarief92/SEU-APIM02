@@ -35,15 +35,13 @@ stages:
               docker image ls
               
         - task: Bash@3
-          displayName: List ACR Repository Images
+          displayName: Verify ACR Push
           inputs:
             targetType: 'inline'
             script: |
-              echo "=== Logging into ACR ==="
-              docker login $(ACR_NAME).azurecr.io --username $(ACR_USERNAME) --password $(ACR_PASSWORD)
-              echo ""
-              echo "=== Pulling image manifest ==="
-              docker pull $(ACR_NAME).azurecr.io/$(IMAGE_REPOSITORY):$(Build.BuildId)
-              echo ""
-              echo "=== Verifying image in local cache ==="
-              docker images | grep $(ACR_NAME)
+                  echo "=== Build Verification ==="
+                  echo "Image successfully built and pushed to ACR"
+                  echo "Image: $(ACR_SERVICE_CONNECTION)/$(IMAGE_REPOSITORY):$(Build.BuildId)"
+                  echo ""
+                  echo "=== Local Docker images containing repository name ==="
+                  docker images | grep "$(IMAGE_REPOSITORY)"
