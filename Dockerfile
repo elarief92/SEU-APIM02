@@ -9,11 +9,13 @@ ENV DJANGO_SETTINGS_MODULE=APIM.settings
 RUN mkdir -p /opt/SEU_APIM/APIM
 WORKDIR /opt/SEU_APIM/APIM
 
-# Install system dependencies
+# Install system dependencies including PostgreSQL client
 RUN apt-get update && apt-get install -y \
     gcc \
     python3-dev \
     libpq-dev \
+    postgresql-client \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install dependencies
