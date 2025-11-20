@@ -54,7 +54,7 @@ stages:
         - task: CopyFiles@2
           displayName: 'Copy Production Manifests to Staging'
           inputs:
-            SourceFolder: 'kubernetes'
+            SourceFolder: 'kubernetes/Production'
             Contents: 'production-*.yaml'
             TargetFolder: '$(Build.ArtifactStagingDirectory)/production-manifests'
             OverWrite: true
@@ -62,7 +62,7 @@ stages:
         - task: CopyFiles@2
           displayName: 'Copy Staging Manifests to Staging'
           inputs:
-            SourceFolder: 'kubernetes'
+            SourceFolder: 'kubernetes/Staging'
             Contents: 'staging-*.yaml'
             TargetFolder: '$(Build.ArtifactStagingDirectory)/staging-manifests'
             OverWrite: true
