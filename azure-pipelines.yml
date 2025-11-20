@@ -49,52 +49,50 @@ stages:
               echo "Tags:"
               echo "  - latest"
               echo "  - $(timestamp)-comID-$(shortCommitId)"
-              echo ""
-              echo "=== Docker Images ==="
-              docker images | grep "$(IMAGE_REPOSITORY)"
 
-        # NEW TASKS FOR KUBERNETES MANIFESTS
-        - task: Bash@3
-          displayName: List Kubernetes Files
-          inputs:
-            targetType: 'inline'
-            script: |
-              echo "=== Kubernetes Directory Structure ==="
-              find ./kubernetes -name "*.yaml" -o -name "*.yml" | sort
-              echo ""
-              echo "=== File Details ==="
-              ls -la ./kubernetes/
-
+        # SEPARATE PRODUCTION AND STAGING MANIFESTS
         - task: CopyFiles@2
-          displayName: 'Copy Kubernetes Manifests to Staging'
+          displayName: 'Copy Production Manifests to Staging'
           inputs:
             SourceFolder: 'kubernetes'
-            Contents: '**/*.yaml'
-            TargetFolder: '$(Build.ArtifactStagingDirectory)/kube-manifests'
+            Contents: 'production-*.yaml'
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/production-manifests'
+            OverWrite: true
+
+        - task: CopyFiles@2
+          displayName: 'Copy Staging Manifests to Staging'
+          inputs:
+            SourceFolder: 'kubernetes'
+            Contents: 'staging-*.yaml'
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/staging-manifests'
             OverWrite: true
 
         - task: Bash@3
-          displayName: Verify Copied Manifests
+          displayName: Verify Separated Manifests
           inputs:
             targetType: 'inline'
             script: |
-              echo "=== Files in Artifact Staging Directory ==="
-              find $(Build.ArtifactStagingDirectory) -name "*.yaml" | sort
+              echo "=== Production Manifests ==="
+              find $(Build.ArtifactStagingDirectory)/production-manifests -name "*.yaml" | sort
               echo ""
-              echo "=== kube-manifests directory contents ==="
-              ls -la $(Build.ArtifactStagingDirectory)/kube-manifests/
+              echo "=== Staging Manifests ==="
+              find $(Build.ArtifactStagingDirectory)/staging-manifests -name "*.yaml" | sort
+              echo ""
+              echo "=== File Counts ==="
+              echo "Production: $(find $(Build.ArtifactStagingDirectory)/production-manifests -name "*.yaml" | wc -l) files"
+              echo "Staging: $(find $(Build.ArtifactStagingDirectory)/staging-manifests -name "*.yaml" | wc -l) files"
 
-        - task: PublishBuildArtifacts@1
-          displayName: 'Publish Kubernetes Manifests'
-          inputs:
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)/kube-manifests'
-            ArtifactName: 'kube-manifests'
-            publishLocation: 'Container'
-
-        # Optional: Also publish as Pipeline Artifact for backup
+        # PUBLISH PIPELINE ARTIFACTS  
         - task: PublishPipelineArtifact@1
-          displayName: 'Publish Pipeline Artifact'
+          displayName: 'Publish Production Pipeline Artifact'
           inputs:
-            targetPath: '$(Build.ArtifactStagingDirectory)/kube-manifests'
-            artifact: 'manifests'
+            targetPath: '$(Build.ArtifactStagingDirectory)/production-manifests'
+            artifact: 'production-manifests'
+            publishLocation: 'pipeline'
+
+        - task: PublishPipelineArtifact@1
+          displayName: 'Publish Staging Pipeline Artifact'
+          inputs:
+            targetPath: '$(Build.ArtifactStagingDirectory)/staging-manifests'
+            artifact: 'staging-manifests'
             publishLocation: 'pipeline'
