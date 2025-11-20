@@ -7,7 +7,7 @@ metadata:
     app: seu-apim
     version: v1
 spec:
-  replicas: 4  # Fixed to 3 replicas
+  replicas: 4  # Changed from 3 to 4
   selector:
     matchLabels:
       app: seu-apim
@@ -23,12 +23,13 @@ spec:
         azure.workload.identity/use: "true"
     spec:
       serviceAccountName: workload-identity-sa
-      imagePullSecrets:  # ADD THIS - CRITICAL FOR ACR ACCESS
+      imagePullSecrets:
       - name: acr-pull-secret
       containers:
       - name: django-api
         image: apimacr001.azurecr.io/seu-apim:latest
-        imagePullPolicy: Always  # ADD THIS TO FORCE NEW IMAGE PULLS
+        imagePullPolicy: Always
+
         ports:
         - containerPort: 8000
       
