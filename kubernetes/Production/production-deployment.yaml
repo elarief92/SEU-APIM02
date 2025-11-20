@@ -7,7 +7,7 @@ metadata:
     app: seu-apim
     version: v1
 spec:
-  replicas: 4  # Start with 1 for debugging
+  replicas: 4  # Fixed to 3 replicas
   selector:
     matchLabels:
       app: seu-apim
@@ -20,12 +20,15 @@ spec:
     metadata:
       labels:
         app: seu-apim
-        azure.workload.identity/use: "true"    # ONLY ADD THIS
+        azure.workload.identity/use: "true"
     spec:
-      serviceAccountName: workload-identity-sa  # ONLY ADD THIS
+      serviceAccountName: workload-identity-sa
+      imagePullSecrets:  # ADD THIS - CRITICAL FOR ACR ACCESS
+      - name: acr-pull-secret
       containers:
       - name: django-api
         image: apimacr001.azurecr.io/seu-apim:latest
+        imagePullPolicy: Always  # ADD THIS TO FORCE NEW IMAGE PULLS
         ports:
         - containerPort: 8000
       
@@ -35,7 +38,7 @@ spec:
           mountPath: "/mnt/secrets-store"
           readOnly: true
 
-        # Include all your environment variables from before...
+        # Environment variables
         env:
         # From secrets - Django & Database
         - name: SECRET_KEY
@@ -311,8 +314,8 @@ spec:
             configMapKeyRef:
               name: seu-apim-config
               key: AZURE_OPEN_AI_API_DEPLOYMENT
-        
-                # Test keys from Azure Key Vault (via auto-created Kubernetes secret)
+
+        # Test keys from Azure Key Vault
         - name: TEST_KEY
           valueFrom:
             secretKeyRef:
@@ -363,53 +366,53 @@ spec:
             secretKeyRef:
               name: azure-kv-seu-apim-config
               key: test-key09
-        - name: TEST_KEY10         # ADD THIS
+        - name: TEST_KEY10
           valueFrom:
             secretKeyRef:
               name: azure-kv-seu-apim-config
               key: test-key10
-        - name: TEST_KEY11         # ADD THIS
+        - name: TEST_KEY11
           valueFrom:
             secretKeyRef:
               name: azure-kv-seu-apim-config
               key: test-key11
-        - name: TEST_KEY12         # ADD THIS
+        - name: TEST_KEY12
           valueFrom:
             secretKeyRef:
               name: azure-kv-seu-apim-config
               key: test-key12
-        - name: TEST_KEY13         # ADD THIS
+        - name: TEST_KEY13
           valueFrom:
             secretKeyRef:
               name: azure-kv-seu-apim-config
               key: test-key13
-        - name: TEST_KEY14         # ADD THIS
+        - name: TEST_KEY14
           valueFrom:
             secretKeyRef:
               name: azure-kv-seu-apim-config
               key: test-key14
-        - name: TEST_KEY16         # ADD THIS
+        - name: TEST_KEY16
           valueFrom:
             secretKeyRef:
               name: azure-kv-seu-apim-config
               key: test-key16
-        - name: TEST_KEY17         # ADD THIS
+        - name: TEST_KEY17
           valueFrom:
             secretKeyRef:
               name: azure-kv-seu-apim-config
               key: test-key17
-        - name: NEW_SECRET         # ADD THIS
+        - name: NEW_SECRET
           valueFrom:
             secretKeyRef:
               name: azure-kv-seu-apim-config
               key: new-secret
-        - name: SEU_LAST_SECRET         # ADD THIS
+        - name: SEU_LAST_SECRET
           valueFrom:
             secretKeyRef:
               name: azure-kv-seu-apim-config
               key: seu-last-secret
 
-        # FIXED Health Checks - Use TCP socket check instead of HTTP
+        # Health Checks
         livenessProbe:
           tcpSocket:
             port: 8000
@@ -439,6 +442,7 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "500m"
+
       # Volumes definition for Azure Key Vault
       volumes:
       - name: kv-secrets
