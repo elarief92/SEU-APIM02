@@ -52,3 +52,49 @@ stages:
               echo ""
               echo "=== Docker Images ==="
               docker images | grep "$(IMAGE_REPOSITORY)"
+
+        # NEW TASKS FOR KUBERNETES MANIFESTS
+        - task: Bash@3
+          displayName: List Kubernetes Files
+          inputs:
+            targetType: 'inline'
+            script: |
+              echo "=== Kubernetes Directory Structure ==="
+              find ./kubernetes -name "*.yaml" -o -name "*.yml" | sort
+              echo ""
+              echo "=== File Details ==="
+              ls -la ./kubernetes/
+
+        - task: CopyFiles@2
+          displayName: 'Copy Kubernetes Manifests to Staging'
+          inputs:
+            SourceFolder: 'kubernetes'
+            Contents: '**/*.yaml'
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/kube-manifests'
+            OverWrite: true
+
+        - task: Bash@3
+          displayName: Verify Copied Manifests
+          inputs:
+            targetType: 'inline'
+            script: |
+              echo "=== Files in Artifact Staging Directory ==="
+              find $(Build.ArtifactStagingDirectory) -name "*.yaml" | sort
+              echo ""
+              echo "=== kube-manifests directory contents ==="
+              ls -la $(Build.ArtifactStagingDirectory)/kube-manifests/
+
+        - task: PublishBuildArtifacts@1
+          displayName: 'Publish Kubernetes Manifests'
+          inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)/kube-manifests'
+            ArtifactName: 'kube-manifests'
+            publishLocation: 'Container'
+
+        # Optional: Also publish as Pipeline Artifact for backup
+        - task: PublishPipelineArtifact@1
+          displayName: 'Publish Pipeline Artifact'
+          inputs:
+            targetPath: '$(Build.ArtifactStagingDirectory)/kube-manifests'
+            artifact: 'manifests'
+            publishLocation: 'pipeline'
