@@ -9,18 +9,33 @@ ENV DJANGO_SETTINGS_MODULE=APIM.settings
 RUN mkdir -p /opt/SEU_APIM/APIM
 WORKDIR /opt/SEU_APIM/APIM
 
-# Install system dependencies including PostgreSQL client
+# Install system dependencies for MSSQL
 RUN apt-get update && apt-get install -y \
     gcc \
+    g++ \
     python3-dev \
-    libpq-dev \
-    postgresql-client \
-    netcat-openbsd \
+    unixodbc-dev \
+    curl \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add Microsoft ODBC driver for SQL Server (updated approach)
+RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc > /etc/apt/trusted.gpg.d/microsoft.asc \
+    && chmod 644 /etc/apt/trusted.gpg.d/microsoft.asc \
+    && curl -sSL https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list
+
+# Install MS ODBC Driver 18 for SQL Server
+RUN apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y msodbcsql18 \
+    && apt-get install -y unixodbc-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Install additional Python packages for MSSQL
+RUN pip install --no-cache-dir pyodbc django-mssql-backend
 
 # Copy project
 COPY . .
