@@ -115,36 +115,53 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'APIM.wsgi.application'
 
-# Database Configuration
-DATABASE_URL = os.getenv('DATABASE_URL')
+# # Database Configuration
+# DATABASE_URL = os.getenv('DATABASE_URL')
 
-if DATABASE_URL and DATABASE_URL.startswith('postgresql://'):
-    # Parse PostgreSQL URL from environment variable
-    url = urlparse(DATABASE_URL)
+# if DATABASE_URL and DATABASE_URL.startswith('postgresql://'):
+#     # Parse PostgreSQL URL from environment variable
+#     url = urlparse(DATABASE_URL)
     
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': url.path[1:],  # Remove leading '/'
-            'USER': url.username,
-            'PASSWORD': url.password,
-            'HOST': url.hostname,
-            'PORT': url.port,
-            'OPTIONS': {
-                'sslmode': 'require',
-            },
-        }
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.postgresql',
+#             'NAME': url.path[1:],  # Remove leading '/'
+#             'USER': url.username,
+#             'PASSWORD': url.password,
+#             'HOST': url.hostname,
+#             'PORT': url.port,
+#             'OPTIONS': {
+#                 'sslmode': 'require',
+#             },
+#         }
+#     }
+#     print(f"✅ Using PostgreSQL database: {url.hostname}/{url.path[1:]}")
+# else:
+#     # Fallback to SQLite (for local development)
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.sqlite3',
+#             'NAME': BASE_DIR / 'seu_apis.db',
+#         }
+#     }
+#     print("⚠️ Using SQLite database (fallback)")
+# Database Configuration - Always use MSSQL
+DATABASES = {
+    'default': {
+        'ENGINE': 'sql_server.pyodbc',
+        'NAME': 'apimanager',
+        'USER': 'apimanager',
+        'PASSWORD': 'f&B!STV%ZHpVe4',
+        'HOST': '172.30.2.39',
+        'PORT': '1424',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 18 for SQL Server',
+            'extra_params': 'TrustServerCertificate=yes;Encrypt=no',
+        },
     }
-    print(f"✅ Using PostgreSQL database: {url.hostname}/{url.path[1:]}")
-else:
-    # Fallback to SQLite (for local development)
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'seu_apis.db',
-        }
-    }
-    print("⚠️ Using SQLite database (fallback)")
+}
+print("✅ Using MSSQL database")
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

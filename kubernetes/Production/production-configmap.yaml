@@ -58,3 +58,14 @@ data:
   AZURE_OPEN_AI_MODEL_NAME: "gpt-4.1"
   AZURE_OPEN_AI_API_VERSION: "2024-12-01-preview"
   AZURE_OPEN_AI_API_DEPLOYMENT: "gpt-4.1"
+
+    # MSSQL Database Configuration
+  DB_ENGINE: "mssql"
+  DB_NAME: "apimanager"
+  DB_HOST: "172.30.2.39"
+  DB_PORT: "1424"
+  DB_OPTIONS_DRIVER: "ODBC Driver 18 for SQL Server"
+  DB_OPTIONS_TRUST_SERVER_CERTIFICATE: "true"
+  DB_OPTIONS_ENCRYPT: "false"
+  DB_INSTANCE: "SQLLIVE01_AG"
+  DATABASE_URL: "mssql://apimanager:f&B!STV%ZHpVe4@172.30.2.39:1424/apimanager?TrustServerCertificate=yes&Encrypt=no&driver=ODBC+Driver+18+for+SQL+Server"

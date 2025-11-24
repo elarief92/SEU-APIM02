@@ -47,11 +47,17 @@ spec:
             secretKeyRef:
               name: seu-apim-secrets
               key: django-secret-key
-        - name: DATABASE_URL
+        # MSSQL Database Configuration 
+        - name: DB_USER
           valueFrom:
             secretKeyRef:
               name: seu-apim-secrets
-              key: database-url
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: seu-apim-secrets
+              key: DB_PASSWORD
 
         # From secrets - External Services
         - name: YAQEEN_USERNAME
@@ -315,6 +321,48 @@ spec:
             configMapKeyRef:
               name: seu-apim-config
               key: AZURE_OPEN_AI_API_DEPLOYMENT
+         # MSSQL Database Configuration from ConfigMap - ADD THESE
+        - name: DB_ENGINE
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: DB_ENGINE
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: DB_NAME
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: DB_PORT
+        - name: DB_OPTIONS_DRIVER
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: DB_OPTIONS_DRIVER
+        - name: DB_OPTIONS_TRUST_SERVER_CERTIFICATE
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: DB_OPTIONS_TRUST_SERVER_CERTIFICATE
+        - name: DB_OPTIONS_ENCRYPT
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: DB_OPTIONS_ENCRYPT
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: seu-apim-config
+              key: DATABASE_URL
+        
 
         # Test keys from Azure Key Vault
         - name: TEST_KEY
