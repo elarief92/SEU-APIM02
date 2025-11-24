@@ -148,7 +148,7 @@ WSGI_APPLICATION = 'APIM.wsgi.application'
 # Database Configuration - Always use MSSQL
 DATABASES = {
     'default': {
-        'ENGINE': 'sql_server.pyodbc',
+        'ENGINE': 'mssql',  # Changed to 'mssql' for mssql-django
         'NAME': 'apimanager',
         'USER': 'apimanager',
         'PASSWORD': 'f&B!STV%ZHpVe4',
