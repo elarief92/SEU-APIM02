@@ -6,7 +6,7 @@ metadata:
 data:
   # Django Configuration
   DEBUG: "False"
-  ALLOWED_HOSTS: "py.seu.edu.sa,172.199.93.190,localhost,127.0.0.1"
+  ALLOWED_HOSTS: "py.seu.edu.sa,172.199.93.190,localhost,127.0.0.1,*.seu.edu.sa,172.25.*,172.25.10.101"
   DJANGO_SETTINGS_MODULE: "APIM.settings"
 
   # External Service URLs

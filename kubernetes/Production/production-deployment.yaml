@@ -7,7 +7,7 @@ metadata:
     app: seu-apim
     version: v1
 spec:
-  replicas: 4  # Changed from 3 to 4
+  replicas: 4
   selector:
     matchLabels:
       app: seu-apim
@@ -29,7 +29,6 @@ spec:
       - name: django-api
         image: apimacr001.azurecr.io/seu-apim:latest
         imagePullPolicy: Always
-
         ports:
         - containerPort: 8000
       
@@ -39,75 +38,67 @@ spec:
           mountPath: "/mnt/secrets-store"
           readOnly: true
 
-        # Environment variables
         env:
-        # From secrets - Django & Database
+        # All secrets from Azure Key Vault
         - name: SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: seu-apim-secrets
+              name: azure-kv-seu-apim-config
               key: django-secret-key
-        # MSSQL Database Configuration 
         - name: DB_USER
           valueFrom:
             secretKeyRef:
-              name: seu-apim-secrets
-              key: DB_USER
+              name: azure-kv-seu-apim-config
+              key: db-user
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: seu-apim-secrets
-              key: DB_PASSWORD
-
-        # From secrets - External Services
+              name: azure-kv-seu-apim-config
+              key: db-password
         - name: YAQEEN_USERNAME
           valueFrom:
             secretKeyRef:
-              name: seu-apim-secrets
+              name: azure-kv-seu-apim-config
               key: yaqeen-username
         - name: YAQEEN_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: seu-apim-secrets
+              name: azure-kv-seu-apim-config
               key: yaqeen-password
         - name: SMS_GATEWAY_KEY
           valueFrom:
             secretKeyRef:
-              name: seu-apim-secrets
+              name: azure-kv-seu-apim-config
               key: sms-gateway-key
         - name: AZURE_OPEN_AI_KEY
           valueFrom:
             secretKeyRef:
-              name: seu-apim-secrets
+              name: azure-kv-seu-apim-config
               key: azure-openai-key
-
-        # From secrets - ERP API Keys
         - name: ATS_ERP_TEST_API_KEY
           valueFrom:
             secretKeyRef:
-              name: seu-apim-secrets
+              name: azure-kv-seu-apim-config
               key: ats-erp-test-api-key
         - name: ATS_ERP_PROD_API_KEY
           valueFrom:
             secretKeyRef:
-              name: seu-apim-secrets
+              name: azure-kv-seu-apim-config
               key: ats-erp-prod-api-key
-
-        # From secrets - External Databases
-        - name: EJADAH_ERP_PASSWORD
+        - name: EJADAH_PASSWORD_FROM_KV
           valueFrom:
             secretKeyRef:
-              name: external-db-secrets
+              name: azure-kv-seu-apim-config
               key: ejadah-password
-        - name: NoorDB_password
+        - name: NOORDB_PASSWORD_FROM_KV
           valueFrom:
             secretKeyRef:
-              name: external-db-secrets
+              name: azure-kv-seu-apim-config
               key: noordb-password
-        - name: BANNER_DB_PASSWORD
+        - name: BANNER_DB_PASSWORD_FROM_KV
           valueFrom:
             secretKeyRef:
-              name: external-db-secrets
+              name: azure-kv-seu-apim-config
               key: banner-db-password
 
         # From ConfigMap - All other environment variables
@@ -321,7 +312,6 @@ spec:
             configMapKeyRef:
               name: seu-apim-config
               key: AZURE_OPEN_AI_API_DEPLOYMENT
-         # MSSQL Database Configuration from ConfigMap - ADD THESE
         - name: DB_ENGINE
           valueFrom:
             configMapKeyRef:
@@ -362,104 +352,6 @@ spec:
             configMapKeyRef:
               name: seu-apim-config
               key: DATABASE_URL
-        
-
-        # Test keys from Azure Key Vault
-        - name: TEST_KEY
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key
-        - name: TEST_KEY02
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key02
-        - name: ANY_NEW_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: any-new-secret
-        - name: TEST_KEY03
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key03
-        - name: TEST_KEY04
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key04
-        - name: TEST_KEY05
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key05
-        - name: TEST_KEY06
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key06
-        - name: TEST_KEY07
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key07
-        - name: TEST_KEY08
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key08
-        - name: TEST_KEY09
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key09
-        - name: TEST_KEY10
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key10
-        - name: TEST_KEY11
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key11
-        - name: TEST_KEY12
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key12
-        - name: TEST_KEY13
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key13
-        - name: TEST_KEY14
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key14
-        - name: TEST_KEY16
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key16
-        - name: TEST_KEY17
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: test-key17
-        - name: NEW_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: new-secret
-        - name: SEU_LAST_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: azure-kv-seu-apim-config
-              key: seu-last-secret
 
         # Health Checks
         livenessProbe:
