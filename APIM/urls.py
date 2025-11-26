@@ -15,7 +15,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     # Admin interface
-    path('admin/', admin.site.urls),
+    path('adam/', admin.site.urls),
     
     # API Documentation
     # path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
