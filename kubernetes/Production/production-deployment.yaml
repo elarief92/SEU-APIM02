@@ -22,8 +22,8 @@ spec:
         app: seu-apim
         azure.workload.identity/use: "true"
       annotations:
-        # Add this - it forces restart on every deployment
-        rollme: "{{BUILD_ID}}"
+        # forces restart on every deployment
+        rollme: "$(Build.BuildId)"
     spec:
       serviceAccountName: workload-identity-sa
       imagePullSecrets:
