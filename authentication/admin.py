@@ -795,6 +795,6 @@ class AdminUserAdmin(admin.ModelAdmin):
 
 
 # Customize admin site headers
-admin.site.site_header = "SEU APIs Token Management 01"
+admin.site.site_header = "SEU APIs Token Management 02"
 admin.site.site_title = "SEU APIs Admin"
 admin.site.index_title = "Token Management Dashboard"
