@@ -17,7 +17,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG =  config('DEBUG', default='False')  # Set to False in production
+DEBUG = config('DEBUG', default='False', cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,0.0.0.0,testserver', cast=lambda v: [s.strip() for s in v.split(',')])
 
@@ -58,13 +58,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+
     # Third party apps
     'rest_framework',
     'drf_yasg',
     'corsheaders',
     'import_export',
-    
+
     # Local apps
     'authentication',
     'apis',
@@ -93,7 +93,8 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only allow all origins in development
+# Fix CORS configuration - ensure it's always a boolean
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default='False').lower() == 'true'
 
 ROOT_URLCONF = 'APIM.urls'
 
@@ -115,53 +116,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'APIM.wsgi.application'
 
-# # Database Configuration
-# DATABASE_URL = os.getenv('DATABASE_URL')
-
-# if DATABASE_URL and DATABASE_URL.startswith('postgresql://'):
-#     # Parse PostgreSQL URL from environment variable
-#     url = urlparse(DATABASE_URL)
-    
-#     DATABASES = {
-#         'default': {
-#             'ENGINE': 'django.db.backends.postgresql',
-#             'NAME': url.path[1:],  # Remove leading '/'
-#             'USER': url.username,
-#             'PASSWORD': url.password,
-#             'HOST': url.hostname,
-#             'PORT': url.port,
-#             'OPTIONS': {
-#                 'sslmode': 'require',
-#             },
-#         }
-#     }
-#     print(f"✅ Using PostgreSQL database: {url.hostname}/{url.path[1:]}")
-# else:
-#     # Fallback to SQLite (for local development)
-#     DATABASES = {
-#         'default': {
-#             'ENGINE': 'django.db.backends.sqlite3',
-#             'NAME': BASE_DIR / 'seu_apis.db',
-#         }
-#     }
-#     print("⚠️ Using SQLite database (fallback)")
-# Database Configuration - Always use MSSQL
+# Database Configuration - Use environment variables from Azure Key Vault
 DATABASES = {
     'default': {
-        'ENGINE': 'mssql',  # Changed to 'mssql' for mssql-django
-        'NAME': 'apimanager',
-        'USER': 'apimanager',
-        'PASSWORD': 'f&B!STV%ZHpVe4',
-        'HOST': '172.30.2.39',
-        'PORT': '1424',
+        'ENGINE': config('DB_ENGINE', default='mssql'),
+        'NAME': config('DB_NAME', default='apimanager'),
+        'USER': config('DB_USER', default='apimanager'),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST': config('DB_HOST', default='172.30.2.39'),
+        'PORT': config('DB_PORT', default='1424'),
         'OPTIONS': {
-            'driver': 'ODBC Driver 18 for SQL Server',
-            'extra_params': 'TrustServerCertificate=yes;Encrypt=no',
+            'driver': config('DB_OPTIONS_DRIVER', default='ODBC Driver 18 for SQL Server'),
+            'extra_params': 'TrustServerCertificate=yes;Encrypt=no'
         },
     }
 }
-print("✅ Using MSSQL database")
 
+print("✅ Using MSSQL database with environment variables")
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
