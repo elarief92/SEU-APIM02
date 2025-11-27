@@ -352,9 +352,9 @@ spec:
               key: DB_OPTIONS_ENCRYPT
         - name: DATABASE_URL
           valueFrom:
-            configMapKeyRef:
-              name: seu-apim-config
-              key: DATABASE_URL
+            secretKeyRef:
+              name: azure-kv-seu-apim-config
+              key: database-url
 
         # Health Checks
         livenessProbe:

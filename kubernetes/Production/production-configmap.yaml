@@ -9,6 +9,8 @@ data:
   ALLOWED_HOSTS: "py.seu.edu.sa,172.199.93.190,localhost,127.0.0.1,*.seu.edu.sa,172.25.*,172.25.10.101"
   DJANGO_SETTINGS_MODULE: "APIM.settings"
 
+  CORS_ALLOW_ALL_ORIGINS: "False"
+
   # External Service URLs
   YAQEEN_BASE_URL: "http://p-hq-yaqin-web.seu.net/api/student"
   NOOR_SOAP_ENDPOINT: "http://10.4.80.25/GSBExpress/Education/MOEStudentRecord/4.0/SchoolStudentRecordService.svc"
@@ -68,4 +70,3 @@ data:
   DB_OPTIONS_TRUST_SERVER_CERTIFICATE: "true"
   DB_OPTIONS_ENCRYPT: "false"
   DB_INSTANCE: "SQLLIVE01_AG"
-  DATABASE_URL: "mssql://apimanager:f&B!STV%ZHpVe4@172.30.2.39:1424/apimanager?TrustServerCertificate=yes&Encrypt=no&driver=ODBC+Driver+18+for+SQL+Server"
